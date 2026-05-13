@@ -1,9 +1,12 @@
-enum Opcode{
-    ADD=0x01,
-    SUB=0x02,
-    PUSH=0x03,
-    HALT=0xff  
-}
+const  Opcode={
+    ADD:0x01,
+    SUB:0x02,
+    PUSH:0x03,
+    JMP:0x04,
+    JZ:0x05,
+    EQ:0x06,
+    HALT:0xFF    
+}as const;
 
 class VirtualMachine{
     private pc:number=0;
@@ -33,7 +36,7 @@ class VirtualMachine{
                  this.executeAdd();
                  break;
             case Opcode.SUB:
-                 this.exectueSub();
+                 this.executeSub();
                  break;
             case Opcode.HALT:
                  this.running=false;
@@ -42,6 +45,15 @@ class VirtualMachine{
             case Opcode.PUSH:
                  this.executePush();
                  break;
+            case Opcode.JMP:
+                 this.executeJump();
+                 break;
+            case Opcode.JZ:
+                 this.executeJumpZero();
+                 break;
+            case Opcode.EQ:
+                 this.executeEquals();
+                 break;
         }
     }
     public executeAdd():void{
@@ -49,7 +61,7 @@ class VirtualMachine{
            const a=this.stack.pop()!;
            this.stack.push(a+b);
     }
-     public exectueSub():void{
+     public executeSub():void{
            const b=this.stack.pop()!;
            const a=this.stack.pop()!;
            this.stack.push(a-b);
@@ -58,4 +70,42 @@ class VirtualMachine{
         const value = this.memory[this.pc++]; 
         this.stack.push(value);
     }
-}
+    public executeJump():void{
+       const targetAddress = this.memory[this.pc++];
+        this.pc = targetAddress; 
+
+      }
+    public executeJumpZero():void{
+        const targetAddress=this.memory[this.pc++];
+        const value=this.stack.pop()!;
+        if(value==0){
+            this.pc=targetAddress
+        }
+        else{
+        }
+    }
+    public executeEquals():void{
+          const a=this.stack.pop()!;
+          const b=this.stack.pop()!;
+          if(a==b){
+            this.stack.push(1);
+          }
+          else{
+            this.stack.push(0);
+          }
+    }
+    }
+     
+    
+const vm=new VirtualMachine();
+
+const program=new Uint8Array([
+    0x03,3,
+    0x03,1,
+    0x02,
+    0x05,9,
+    0x04,2,
+    0xFF,
+])
+vm.loadProgram(program,0);
+vm.run();
