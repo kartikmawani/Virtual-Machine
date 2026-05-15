@@ -1,3 +1,5 @@
+import { isNumberObject } from "node:util/types";
+
 export interface TokenizedLine {
     label: string | null;       
     mnemonic: string | null;    
@@ -44,8 +46,36 @@ export class Assembler {
 
         return parsedCode;
     }
+     public generateBytecode(tokens: TokenizedLine[], symbolTable: Record<string, number>): Uint8Array {
+    const byteData: number[] = [];
+    for (const token of tokens) {
+        if (token.mnemonic) {
+            const instrReq = InstructionSet[token.mnemonic];
+            if (!instrReq) {
+                throw new Error(`Unknown instruction: ${token.mnemonic}`);
+            }
+ 
+            byteData.push(instrReq.opcode);
+            if (instrReq.expectsOperand) {
+                if (!token.operand) {
+                    throw new Error(`${token.mnemonic} requires an operand!`);
+                }
+                if (symbolTable[token.operand] !== undefined) {
+                    byteData.push(symbolTable[token.operand]);
+                } else {
+                    const value = parseInt(token.operand);
+                    if (isNaN(value)) {
+                        throw new Error(`Invalid operand: ${token.operand}`);
+                    }
+                    byteData.push(value);
+                }
+            }
+        }
+    }
+    return new Uint8Array(byteData);
+    
 }
-
+}
 
 const asm = new Assembler();
 const testProgram = `
@@ -61,5 +91,28 @@ END:
     HALT
 `;
 
-const tokens = asm.tokenize(testProgram);
+const tokens = asm.tokenize(testProgram);           
 console.log(tokens);
+
+
+if (startAddress + rawBytes.length > 65536) {
+        throw new Error("Program too large: Exceeds VM memory boundaries.");
+    }
+
+    
+    for (let i = 0; i < rawBytes.length; i++) {
+        if (rawBytes[i] < 0 || rawBytes[i] > 255) {
+            throw new Error(
+                `Byte Overflow at index ${i}: Value ${rawBytes[i]} does not fit in 8 bits. 
+                (Common cause: Label address is too high for a 1-byte operand)`
+            );
+        }
+    }
+
+    
+    const binary = new Uint8Array(rawBytes);
+
+    console.log("Assembly successful.");
+    console.log(`Program size: ${binary.length} bytes.`);
+    
+    return binary;
