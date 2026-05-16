@@ -11,11 +11,13 @@ const  Opcode={
 class VirtualMachine{
     private pc:number=0;
     private memory:Uint8Array;
+    private registers:Uint16Array;
     private stack:number[]=[];
     private running:boolean=false;
 
     constructor(memorySize: number = 65536) {
         this.memory = new Uint8Array(memorySize);
+        this.registers = new Uint16Array(8);
     }
 
     public loadProgram(bytecode: Uint8Array, startAddress: number = 0x3000): void {
@@ -27,6 +29,14 @@ class VirtualMachine{
         while(this.running){
             this.step();
         }
+    }
+    private fetch16(): number {
+        const highByte = this.memory[this.pc++];
+        const lowByte = this.memory[this.pc++];
+        return (highByte << 8) | lowByte;
+    }
+    private fetch8(): number {
+        return this.memory[this.pc++];
     }
     public step(){
         const instruction=this.memory[this.pc];
@@ -54,6 +64,27 @@ class VirtualMachine{
             case Opcode.EQ:
                  this.executeEquals();
                  break;
+            case 0x07: {  
+               const regIndex = this.fetch8();   
+               const literal = this.fetch16();    
+               if (regIndex >= this.registers.length) {
+                     throw new Error(`Invalid register index: R${regIndex}`);
+                 } 
+                 this.registers[regIndex] = literal;
+                   break;
+               }  
+
+       case 0x08: {  
+           const srcReg = this.fetch8();
+           const destReg = this.fetch8();
+           this.registers[destReg] = this.registers[srcReg];
+           break;
+          }
+        case 0x09: {  
+            const regIndex = this.fetch8();
+            this.stack.push(this.registers[regIndex]);
+            break;
+           }
         }
     }
     public executeAdd():void{

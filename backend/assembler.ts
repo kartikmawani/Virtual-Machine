@@ -46,6 +46,11 @@ export class Assembler {
 
         return parsedCode;
     }
+    function getRegisterIndex(regName: string): number {
+    const match = regName.match(/^R([0-7])$/i); // Matches R0, r0, R1, etc.
+    if (!match) throw new Error(`Invalid register name: ${regName}`);
+    return parseInt(match[1]);
+}
      public generateBytecode(tokens: TokenizedLine[], symbolTable: Record<string, number>): Uint8Array {
     const byteData: number[] = [];
     for (const token of tokens) {
