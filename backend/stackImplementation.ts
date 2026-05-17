@@ -8,13 +8,22 @@ const  Opcode={
     HALT:0xFF    
 }as const;
 
+
+ export interface  VMState{
+      pc:number,
+      registers:number[],
+      memory:Uint8Array,
+      stack:number[],
+
+}
+
 class VirtualMachine{
     private pc:number=0;
     private memory:Uint8Array;
     private registers:Uint16Array;
     private stack:number[]=[];
     private running:boolean=false;
-
+     
     constructor(memorySize: number = 65536) {
         this.memory = new Uint8Array(memorySize);
         this.registers = new Uint16Array(8);
@@ -37,6 +46,15 @@ class VirtualMachine{
     }
     private fetch8(): number {
         return this.memory[this.pc++];
+    }
+    public getGameState():VMState{
+       return{
+        pc:this.pc,
+        memory:this.memory,
+        stack:[...this.stack],
+       
+         registers:Array.from(this.registers)
+       }        
     }
     public step(){
         const instruction=this.memory[this.pc];
@@ -88,34 +106,42 @@ class VirtualMachine{
         }
     }
     public executeAdd():void{
-           const b=this.stack.pop()!;
+        if (this.stack.length < 2) 
+            {
+                throw new Error("Stack Underflow at ADD");
+            }           
+                const b=this.stack.pop()!;
            const a=this.stack.pop()!;
            this.stack.push(a+b);
     }
      public executeSub():void{
-           const b=this.stack.pop()!;
-           const a=this.stack.pop()!;
-           this.stack.push(a-b);
+            if (this.stack.length < 2) 
+                throw new Error("Stack Underflow at SUB");
+        const b = this.stack.pop()!;
+        const a = this.stack.pop()!;
+        this.stack.push(a - b);
     }
     private executePush(): void {
         const value = this.memory[this.pc++]; 
         this.stack.push(value);
     }
     public executeJump():void{
-       const targetAddress = this.memory[this.pc++];
-        this.pc = targetAddress; 
-
+        this.pc = this.fetch16();
       }
     public executeJumpZero():void{
-        const targetAddress=this.memory[this.pc++];
-        const value=this.stack.pop()!;
-        if(value==0){
-            this.pc=targetAddress
-        }
-        else{
+         const targetAddress = this.fetch16();
+        if (this.stack.length === 0) 
+            throw new Error("Stack Underflow at JZ");
+        const value = this.stack.pop()!;
+        if (value === 0) {
+            this.pc = targetAddress;
         }
     }
     public executeEquals():void{
+            if (this.stack.length < 2) 
+            {
+                throw new Error("Stack Underflow at ADD");
+            } 
           const a=this.stack.pop()!;
           const b=this.stack.pop()!;
           if(a==b){
@@ -131,11 +157,11 @@ class VirtualMachine{
 const vm=new VirtualMachine();
 
 const program=new Uint8Array([
-    0x03,3,
-    0x03,1,
-    0x02,
-    0x05,9,
-    0x04,2,
+    0x03, 3,        
+    0x03, 1,        
+    0x02,           
+    0x05, 0, 11,   
+    0x04, 0, 2,   
     0xFF,
 ])
 vm.loadProgram(program,0);
